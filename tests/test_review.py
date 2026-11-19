@@ -124,6 +124,38 @@ class ServerGuards(unittest.TestCase):
                               headers={"Content-Type": "application/json"})
         self.assertEqual(status, 404)
 
+    def test_downloads_in_three_formats(self):
+        from datetime import date
+        from src.core import paths, store
+        from src.core.schema import Filing, Issuer
+        from tests.test_schema import SHA, make_fact
+        conn = store.connect(paths.db_path())
+        store.init_db(conn)
+        store.add_issuer(conn, Issuer(id="DLX", name="Download Plc", reporting_currency="USD"))
+        store.add_filing(conn, Filing(id="DLX-AR", issuer_id="DLX", kind="annual", source_url="https://example.org/a.pdf",
+                                      pdf_sha256=SHA, published_on=date(2026, 3, 31)))
+        store.add_fact(conn, make_fact(issuer_id="DLX", filing_id="DLX-AR", line_item="total_assets",
+                                       value_as_reported="1000", scale=1))
+        conn.commit()
+        conn.close()
+        for fmt, kind in (("csv", "text/csv"), ("json", "application/json"),
+                          ("xlsx", "application/vnd.openxmlformats")):
+            with urllib.request.urlopen(f"http://127.0.0.1:{self.port}/api/export/DLX.{fmt}") as r:
+                body = r.read()
+                self.assertEqual(r.status, 200)
+                self.assertTrue(r.headers["Content-Type"].startswith(kind), fmt)
+                self.assertIn(f".{fmt}", r.headers["Content-Disposition"])
+            if fmt == "csv":
+                self.assertIn(b"total_assets", body)
+        status, _ = self.call("/api/export/NOPE.csv")
+        self.assertEqual(status, 404)
+        conn = store.connect(paths.db_path())   # leave the shared test database empty for the other tests
+        for sql in ("DELETE FROM facts WHERE issuer_id='DLX'", "DELETE FROM filings WHERE issuer_id='DLX'",
+                    "DELETE FROM issuers WHERE id='DLX'"):
+            conn.execute(sql)
+        conn.commit()
+        conn.close()
+
 
 if __name__ == "__main__":
     unittest.main()

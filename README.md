@@ -14,7 +14,8 @@ numbers, then explains what those numbers say and what each company may be worth
   come in as cash, how much does it owe, and does it earn more than investors require.
 - **Values the company** with a method that fits its industry. You get a range, every step of the maths,
   and where each input comes from.
-- **Lets you take the data away** as an Excel workbook, a CSV or JSON file, or a small API.
+- **Lets you take the data away** with one click as an Excel workbook, a CSV or a JSON file, or through a
+  small API.
 - **Reads your own reports too**, for companies that aren't listed ([how](#add-your-own-reports)). Your
   files stay on your computer.
 

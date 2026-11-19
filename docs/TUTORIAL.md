@@ -15,7 +15,8 @@ To stop the app, close the black terminal window (or press Ctrl+C in it).
 
 ## 2. Pick a company
 
-Click the company name at the top and choose one from the list.
+Click the company name at the top. A list opens with a search box: type part of a name or code (for
+example `bank` or `ABC`) and press Enter, or scroll and click.
 
 ![The top of a company page](images/1-report.png)
 
@@ -24,6 +25,8 @@ companies these are revenue, profit, free cash flow and net debt. For a bank the
 profit, loans and deposits, because banks report differently.
 
 **Download Excel workbook** gives you every number, the ratios as live formulas, prices and sources.
+**CSV** and **JSON** give the same statements as one plain table, with the same columns for every
+company: handy for your own spreadsheet analysis or a program.
 
 ## 3. Read the overview
 

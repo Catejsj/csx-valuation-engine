@@ -82,6 +82,12 @@ svg.i{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.25;str
 .menu{position:absolute;top:calc(100% + 10px);left:0;min-width:300px;padding:6px;border-radius:22px;background:var(--glass);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
   box-shadow:0 0 0 1px var(--shell-line),0 24px 60px -20px rgba(0,0,0,.6);opacity:0;transform:translateY(-6px) scale(.98);pointer-events:none;transition:opacity .35s var(--ease),transform .45s var(--ease)}
 .menu.open{opacity:1;transform:none;pointer-events:auto}
+.menu{display:flex;flex-direction:column;max-height:min(70vh,560px);width:min(380px,calc(100vw - 32px));background:var(--core)}
+.menu-q{margin:4px 4px 6px;padding:10px 14px;border:0;border-radius:14px;background:var(--shell);color:var(--ink);font:400 14px var(--sans);outline:none;box-shadow:0 0 0 1px var(--hair2)}
+.menu-q:focus{box-shadow:0 0 0 1px var(--gold)}
+.menu-list{overflow-y:auto;overscroll-behavior:contain;min-height:0}
+.dl{display:flex;gap:8px;flex-wrap:wrap}
+.menu-count{padding:6px 14px 4px;font:500 10.5px var(--mono);color:var(--mute);letter-spacing:.06em}
 .menu button{width:100%;display:flex;justify-content:space-between;align-items:center;gap:14px;padding:11px 14px;border:0;border-radius:16px;background:none;cursor:pointer;text-align:left;transition:background .3s var(--ease)}
 .menu button:hover,.menu button[aria-current=true]{background:var(--shell)}
 .menu b{font:400 18px var(--serif)}
@@ -515,13 +521,26 @@ function reveal(root){let i=0;root.querySelectorAll(".rv").forEach(el=>{el.style
 function issuers(){const m=new Map();S.filings.forEach(f=>{if(!m.has(f.issuer_id))m.set(f.issuer_id,{id:f.issuer_id,name:f.name,origin:new Set()});m.get(f.issuer_id).origin.add(f.origin);});return[...m.values()];}
 async function loadFilings(){S.filings=await api("/api/filings");renderMenu();renderLibrary();}
 function renderMenu(){
-  const list=issuers();
-  $("#companyMenu").innerHTML=list.map(c=>`<button role="option" data-i="${esc(c.id)}" aria-current="${c.id===S.issuer}"><span><b>${esc(c.name)}</b><br><small>${esc(c.id)}</small></span>${c.origin.has("official")?'<span class="tag official">official</span>':'<span class="tag upload">upload</span>'}</button>`).join("")||'<p class="note" style="padding:14px;margin:0">No companies yet. Open Files to add a report.</p>';
-  $("#companyMenu").querySelectorAll("button").forEach(b=>b.onclick=()=>{closeMenu();openCompany(b.dataset.i);});
+  const list=issuers().slice().sort((a,b)=>a.name.localeCompare(b.name));
+  const m=$("#companyMenu");
+  if(!list.length){m.innerHTML='<p class="note" style="padding:14px;margin:0">No companies yet. Open Files to add a report.</p>';$("#codes").innerHTML="";return;}
+  const prev=$("#menuQ"),keep=prev?prev.value:"",focused=document.activeElement===prev;
+  m.innerHTML=`<input class="menu-q" id="menuQ" type="search" placeholder="Search ${list.length} companies by name or code" aria-label="Search companies"><div class="menu-list" id="menuList"></div><div class="menu-count" id="menuCount"></div>`;
+  const draw=()=>{const q=$("#menuQ").value.trim().toLowerCase();
+    const shown=list.filter(c=>!q||c.name.toLowerCase().includes(q)||c.id.toLowerCase().includes(q));
+    $("#menuList").innerHTML=shown.map(c=>`<button role="option" data-i="${esc(c.id)}" aria-current="${c.id===S.issuer}"><span><b>${esc(c.name)}</b><br><small>${esc(c.id)}</small></span>${c.origin.has("official")?'<span class="tag official">official</span>':'<span class="tag upload">upload</span>'}</button>`).join("")||'<p class="note" style="padding:14px;margin:0">No company matches.</p>';
+    $("#menuCount").textContent=q?`${shown.length} of ${list.length}`:`${list.length} companies`;
+    $("#menuList").querySelectorAll("button").forEach(b=>b.onclick=()=>{closeMenu();openCompany(b.dataset.i);});};
+  $("#menuQ").addEventListener("input",draw);
+  $("#menuQ").addEventListener("keydown",e=>{if(e.key==="Enter"){const b=$("#menuList button");if(b)b.click();}else if(e.key==="Escape")closeMenu();});
+  m.onclick=e=>e.stopPropagation();
+  $("#menuQ").value=keep;if(focused)$("#menuQ").focus();
+  draw();
   $("#codes").innerHTML=list.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("");
 }
 function closeMenu(){$("#companyMenu").classList.remove("open");$("#companyBtn").setAttribute("aria-expanded","false");}
-$("#companyBtn").onclick=e=>{e.stopPropagation();const m=$("#companyMenu");m.classList.toggle("open");$("#companyBtn").setAttribute("aria-expanded",m.classList.contains("open"));};
+$("#companyBtn").onclick=e=>{e.stopPropagation();const m=$("#companyMenu");m.classList.toggle("open");const open=m.classList.contains("open");$("#companyBtn").setAttribute("aria-expanded",open);
+  if(open){const q=$("#menuQ");if(q){q.value="";q.dispatchEvent(new Event("input"));setTimeout(()=>q.focus(),30);}m.querySelector('[aria-current="true"]')?.scrollIntoView({block:"nearest"});}};
 document.addEventListener("click",e=>{if(!e.target.closest(".picker"))closeMenu();});
 async function openCompany(id){
   if(!id){emptyState();return;}
@@ -634,7 +653,7 @@ function renderReport(){
         <h1>${titleHtml(R.name)}</h1>
         <p class="lede">${ys.length?`<b>${ys.length} year${ys.length>1?"s":""}</b> of statements, FY${ys[0]}–FY${latest}, from <b>${used.length} report${used.length===1?"":"s"}</b>${off?` (${off} switched off)`:""}. Every number below is computed from them and traces back to its page.`:"No complete year yet. Add an annual report, or switch one on, in Files."}</p>
         <div class="trust"><span><i style="background:var(--up)"></i>${reviewed}% of values checked by a person</span><span><i style="background:var(--gold)"></i>${R.review.total} values read</span>${R.uses_uploads?'<span><i style="background:var(--warn)"></i>includes your uploads</span>':""}</div>
-        ${ys.length?`<div style="margin-top:22px"><a class="ghost" href="/api/export/${encodeURIComponent(R.issuer)}.xlsx" download>Download Excel workbook <svg class="i"><use href="#i-down"/></svg></a></div>`:""}
+        ${ys.length?`<div class="dl" style="margin-top:22px"><a class="ghost" href="/api/export/${encodeURIComponent(R.issuer)}.xlsx" download>Download Excel workbook <svg class="i"><use href="#i-down"/></svg></a><a class="ghost" href="/api/export/${encodeURIComponent(R.issuer)}.csv" download title="Every statement value in one table, the same columns for every company">CSV</a><a class="ghost" href="/api/export/${encodeURIComponent(R.issuer)}.json" download title="The same data as CSV, for programs">JSON</a></div>`:""}
       </div>
       <div class="tiles">${tiles}</div>
     </section>

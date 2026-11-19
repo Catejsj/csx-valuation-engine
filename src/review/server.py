@@ -405,12 +405,26 @@ class Handler(BaseHTTPRequestHandler):
                 raise KeyError(path)
             return self._send(HTTPStatus.OK, f.read_bytes(), "font/woff2")
         conn = _conn()
-        m = re.fullmatch(r"/api/export/([A-Za-z0-9_.-]+)\.xlsx", path)
+        m = re.fullmatch(r"/api/export/([A-Za-z0-9_.-]+)\.(xlsx|csv|json)", path)
         if m:
-            body = workbook_bytes(conn, m.group(1))
+            issuer, fmt = m.group(1), m.group(2)
+            if conn.execute("SELECT 1 FROM issuers WHERE id=?", (issuer,)).fetchone() is None:
+                raise KeyError(issuer)
+            if fmt == "xlsx":
+                body = workbook_bytes(conn, issuer)
+                ctype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            else:   # the standardised statements; on this computer they include your own uploads
+                from src.export import standard
+                if fmt == "csv":
+                    body = standard.to_csv(conn, issuer, official_only=False).encode("utf-8-sig")  # BOM: Excel reads UTF-8
+                    ctype = "text/csv; charset=utf-8"
+                else:
+                    body = json.dumps(standard.to_json(conn, issuer, official_only=False), ensure_ascii=False,
+                                      indent=1).encode("utf-8")
+                    ctype = "application/json; charset=utf-8"
             self.send_response(HTTPStatus.OK)
-            self.send_header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-            self.send_header("Content-Disposition", f'attachment; filename="{m.group(1)}-{date.today().isoformat()}.xlsx"')
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Disposition", f'attachment; filename="{issuer}-{date.today().isoformat()}.{fmt}"')
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
