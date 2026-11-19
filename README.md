@@ -59,7 +59,8 @@ pages.
 
 **What reads well:** text PDFs in English (not scans) with the three statements laid out the usual way for
 company accounts (IFRS style, as Cambodian companies and most of Asia and Europe print them), with amounts
-in US dollars or riel. **Not yet:** US 10-K filings and amounts in other currencies, scanned pages, and
+in US dollars or riel. [What a useful filing contains](docs/FILING-GUIDE.md) explains what makes a report
+easy to read, for people and for software. **Not yet:** US 10-K filings and amounts in other currencies, scanned pages, and
 Khmer-language reports. A file it can't read is refused with the reason; it never guesses numbers.
 
 ## Commands (optional)
@@ -99,6 +100,8 @@ All the commands, including the rarely used ones, are in [docs/COMMANDS.md](docs
 
 - [Tutorial](docs/TUTORIAL.md): using the app, step by step
 - [Commands](docs/COMMANDS.md): every command
+- [What a useful filing contains](docs/FILING-GUIDE.md): what makes company reports easy or hard to use, and
+  why the US 10-K structure works better
 - [Developing](docs/DEVELOPING.md): how the code works, what the reader can read, how it stays fast
 
 Licence: PolyForm Noncommercial 1.0.0 with extra permission for students, teaching, research and
