@@ -1,0 +1,47 @@
+# Cambodia: every country-specific input the valuation uses.
+#
+# Each value has a source and a date. `verified = true` is optional: it means a person has
+# checked the value against the source. Unchecked values are still used; the result lists
+# them so a reader knows. Values marked "fetched" were copied from the named source by code
+# on the date shown. Edit any value here and the valuation follows.
+
+country = "KH"
+name = "Cambodia"
+currency_of_valuation = "USD"
+
+[country_risk_premium]
+value = 0.0712
+source = "Damodaran, Country Default Spreads and Risk Premiums (ctryprem.html), row Cambodia: Moody's B2, country risk premium 7.12%"
+url = "https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ctryprem.html"
+as_of = "2026-01-05"
+verified = false
+note = "fetched 2026-11-19. Rating-based: default spread 4.67% x relative equity volatility."
+
+[default_spread]
+value = 0.0467
+source = "Damodaran ctryprem.html, row Cambodia: adjusted default spread 4.67%"
+url = "https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ctryprem.html"
+as_of = "2026-01-05"
+verified = false
+note = "fetched 2026-11-19. Used in the cost of debt when a company's own interest cost cannot be measured."
+
+[corporate_tax_rate]
+value = 0.20
+source = "Damodaran ctryprem.html, row Cambodia: corporate tax rate 20.00%"
+url = "https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ctryprem.html"
+as_of = "2026-01-05"
+verified = false
+note = "fetched 2026-11-19. Standard rate only. Incentives for listed companies (a profit-tax reduction for some years after listing) and project tax holidays are NOT applied; check the General Department of Taxation rules before using a lower rate."
+
+[liquidity_discount]
+# Bands for the price discount an illiquid share may carry. No local study is known; these
+# are judgement ranges, shown as ranges and never applied silently.
+source = "judgement starting point (no Cambodian study known); replace with a cited emerging-market illiquidity study"
+as_of = "2026-11-19"
+verified = false
+low = [0.00, 0.10]        # trades most days
+medium = [0.10, 0.20]
+high = [0.20, 0.30]       # many days with no trades
+unlisted = [0.25, 0.35]   # an uploaded company with no market at all
+zero_volume_share_medium = 0.20   # share of trading days with no trades that moves a stock to "medium"
+zero_volume_share_high = 0.50     # ... and to "high"

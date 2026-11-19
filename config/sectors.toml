@@ -1,0 +1,53 @@
+# Which valuation model fits each company, and which industry beta it borrows.
+#
+# model: "bank" (residual income + justified P/B), "dividend" (dividend discount: utilities,
+# ports, water), "property" (net asset value from book equity), "fcff" (two-stage free cash
+# flow to the firm), or "none" (no clean model fits: the report says "not handled").
+#
+# A company not listed here (an upload, a new listing) can pick a sector in the app; the
+# [sector_models] table below turns that sector into a model and an industry beta.
+#
+# Sector choices are a starting point from each company's name and listing; check them
+# against the annual report's business description. verified = false until a person has.
+
+source = "judgement from company names and listing (2026-11-19)"
+verified = false
+
+[companies]
+ABC = { sector = "Bank", model = "bank", industry = "Bank (Money Center)" }
+CGSM = { sector = "Telecom", model = "fcff", industry = "Telecom (Wireless)" }
+PWSA = { sector = "Water utility", model = "dividend", industry = "Utility (Water)" }
+PAS = { sector = "Port", model = "dividend", industry = "Transportation" }
+PPAP = { sector = "Port", model = "dividend", industry = "Transportation" }
+PPSP = { sector = "Special economic zone", model = "fcff", industry = "Real Estate (Operations & Services)" }
+GTI = { sector = "Garment manufacturing", model = "fcff", industry = "Apparel" }
+PEPC = { sector = "Power engineering", model = "fcff", industry = "Engineering/Construction" }
+DBDE = { sector = "Engineering and construction", model = "fcff", industry = "Engineering/Construction" }
+JSL = { sector = "Property development", model = "property", industry = "Real Estate (Development)" }
+PCG = { sector = "Property development", model = "property", industry = "Real Estate (Development)" }
+MJQE = { sector = "Education", model = "fcff", industry = "Education" }
+RRC32A = { sector = "Railway", model = "fcff", industry = "Transportation (Railroads)" }
+
+# Sector -> model and industry beta, for companies without an entry above.
+[sector_models]
+"Bank" = { model = "bank", industry = "Bank (Money Center)" }
+"Microfinance" = { model = "bank", industry = "Financial Svcs. (Non-bank & Insurance)" }
+"Insurance or other finance" = { model = "bank", industry = "Financial Svcs. (Non-bank & Insurance)" }
+"Telecom" = { model = "fcff", industry = "Telecom (Wireless)" }
+"Water utility" = { model = "dividend", industry = "Utility (Water)" }
+"Power" = { model = "dividend", industry = "Power" }
+"Port" = { model = "dividend", industry = "Transportation" }
+"Railway or transport" = { model = "fcff", industry = "Transportation" }
+"Property development" = { model = "property", industry = "Real Estate (Development)" }
+"Special economic zone" = { model = "fcff", industry = "Real Estate (Operations & Services)" }
+"Engineering and construction" = { model = "fcff", industry = "Engineering/Construction" }
+"Construction materials" = { model = "fcff", industry = "Construction Supplies" }
+"Garment manufacturing" = { model = "fcff", industry = "Apparel" }
+"Food and beverage" = { model = "fcff", industry = "Food Processing" }
+"Agriculture" = { model = "fcff", industry = "Farming/Agriculture" }
+"Distribution and trading" = { model = "fcff", industry = "Retail (Distributors)" }
+"Retail" = { model = "fcff", industry = "Retail (General)" }
+"Hotel and tourism" = { model = "fcff", industry = "Hotel/Gaming" }
+"Healthcare" = { model = "fcff", industry = "Hospitals/Healthcare Facilities" }
+"Education" = { model = "fcff", industry = "Education" }
+"Other" = { model = "fcff", industry = "Total Market" }

@@ -1,0 +1,76 @@
+# Market-wide valuation inputs (not country-specific). Same rules as the country file:
+# each value has a source and a date; `verified = true` (optional) means a person checked it.
+# Unchecked values are used and listed in the result.
+
+[risk_free_rate]
+value = 0.0507
+source = "US Treasury, Daily Treasury Par Yield Curve Rates, 10 Yr, 11/18/2026: 5.07%"
+url = "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2026/all?type=daily_treasury_yield_curve&field_tdr_date_value=2026&page&_format=csv"
+as_of = "2026-11-18"
+verified = false
+note = "fetched 2026-11-19. The plain 10-year yield. (Damodaran subtracts a US default spread, 0.23% in Jan 2026; not done here.)"
+
+[mature_equity_risk_premium]
+value = 0.0423
+source = "Damodaran ctryprem.html: Cambodia total ERP 11.35% minus country risk premium 7.12% = mature-market ERP 4.23%"
+url = "https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ctryprem.html"
+as_of = "2026-01-05"
+verified = false
+note = "fetched 2026-11-19."
+
+[terminal_growth]
+value = 0.025
+low = 0.020
+high = 0.030
+source = "judgement: long-run nominal USD growth, kept below the risk-free rate"
+as_of = "2026-11-19"
+verified = false
+
+[forecast]
+# Two-stage models: a first stage of `years` with growth taken from the company's own
+# revenue history, clamped to [min, max], then the terminal growth rate.
+years = 5
+growth_min = 0.0
+growth_max = 0.10
+source = "judgement starting point"
+as_of = "2026-11-19"
+verified = false
+
+[sensitivity]
+cost_of_capital_step = 0.01   # bear / bull: cost of capital +/- this
+growth_step = 0.005           # bear / bull: terminal growth -/+ this
+source = "judgement starting point"
+as_of = "2026-11-19"
+verified = false
+
+# Industry betas: Damodaran, Betas by Sector (Emerging Markets), betaemerg.xls, updated
+# 2026-01-08. `unlevered` = unlevered beta corrected for cash; `de` = industry debt/equity
+# (market); used to relever and as the capital structure for companies with no share price.
+[betas]
+source = "Damodaran, Betas by Sector, Emerging Markets (betaemerg.xls)"
+url = "https://pages.stern.nyu.edu/~adamodar/pc/datasets/betaemerg.xls"
+as_of = "2026-01-08"
+verified = false
+note = "fetched 2026-11-19 (columns: unlevered beta corrected for cash, D/E ratio)"
+
+[betas.industries]
+"Apparel" = { unlevered = 0.6662, de = 0.2598 }
+"Bank (Money Center)" = { unlevered = 0.3043, de = 1.79, levered = 0.5857 }   # banks use the levered (regression) beta
+"Education" = { unlevered = 0.7702, de = 0.3395 }
+"Engineering/Construction" = { unlevered = 0.6129, de = 1.445 }
+"Power" = { unlevered = 0.461, de = 1.044 }
+"Real Estate (Development)" = { unlevered = 0.4522, de = 1.967 }
+"Real Estate (Operations & Services)" = { unlevered = 0.5898, de = 0.6132 }
+"Telecom (Wireless)" = { unlevered = 0.6684, de = 0.3004 }
+"Transportation" = { unlevered = 0.7938, de = 0.5881 }
+"Transportation (Railroads)" = { unlevered = 0.8873, de = 0.3764 }
+"Utility (Water)" = { unlevered = 0.4729, de = 0.9324 }
+"Construction Supplies" = { unlevered = 0.9062, de = 0.3265 }
+"Farming/Agriculture" = { unlevered = 0.498, de = 0.578 }
+"Financial Svcs. (Non-bank & Insurance)" = { unlevered = 0.4041, de = 1.166, levered = 0.6989 }
+"Food Processing" = { unlevered = 0.6083, de = 0.38 }
+"Hospitals/Healthcare Facilities" = { unlevered = 0.6461, de = 0.208 }
+"Hotel/Gaming" = { unlevered = 0.5798, de = 0.4537 }
+"Retail (Distributors)" = { unlevered = 0.5327, de = 0.879 }
+"Retail (General)" = { unlevered = 0.8902, de = 0.3665 }
+"Total Market" = { unlevered = 0.8479, de = 0.5756 }

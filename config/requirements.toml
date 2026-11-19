@@ -1,0 +1,56 @@
+# How much history each calculation needs before the engine will run it.
+# The engine refuses (and says why) rather than padding missing years.
+# Years = fiscal years with all three statements stored and not rejected.
+# Each annual report prints two years (current + comparative), so N reports give N+1 years.
+
+[value.dcf]
+min_years = 3
+why = "Growth, margins and reinvestment need a trend, not one data point."
+
+[value.bank_excess_return]
+min_years = 3
+why = "Return on equity and loan growth need several years to separate a trend from a one-off."
+
+[value.dividend_discount]
+min_years = 3
+why = "Payout ratio and dividend growth need a history."
+
+[value.comps]
+min_years = 1
+why = "Multiples use the latest year (plus the current price)."
+
+[credit.ratios]
+min_years = 1
+why = "Leverage and coverage can be read from one year."
+
+[credit.trend]
+min_years = 3
+why = "Whether debt service is getting easier or harder needs a direction."
+
+[quality.altman_z]
+min_years = 1
+why = "Uses one year's balance sheet and income statement."
+
+[quality.beneish_m]
+min_years = 2
+why = "Compares this year with last year (eight year-on-year indexes)."
+
+[quality.piotroski]
+min_years = 2
+why = "Five of its nine tests compare with the year before."
+
+[quality.accruals]
+min_years = 2
+why = "Uses changes in working capital between years."
+
+[deals.merger]
+min_years = 1
+why = "Uses the latest year for both companies plus the user's deal terms."
+
+[deals.lbo]
+min_years = 3
+why = "A debt schedule needs a believable base for cash flow; one year can be an outlier."
+
+[market.liquidity]
+min_trading_days = 250
+why = "About one year of daily prices and volumes."

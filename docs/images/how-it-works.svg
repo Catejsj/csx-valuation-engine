@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 360" font-family="Helvetica, Arial, sans-serif">
+  <rect width="960" height="360" rx="18" fill="#101114"/>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#d8b76a"/>
+    </marker>
+    <style>
+      .box{fill:#1a1c21;stroke:#3a3d45;stroke-width:1.5}
+      .key{fill:#2a2416;stroke:#d8b76a;stroke-width:1.5}
+      .t{fill:#ece8df;font-size:15px;font-weight:600}
+      .s{fill:#a7a39a;font-size:12px}
+      .n{fill:#d8b76a;font-size:12px;font-weight:700}
+      .l{stroke:#d8b76a;stroke-width:1.6;fill:none;marker-end:url(#a)}
+    </style>
+  </defs>
+
+  <!-- inputs -->
+  <rect class="box" x="24" y="60" width="190" height="78" rx="12"/>
+  <text class="n" x="40" y="84">1</text><text class="t" x="56" y="84">Exchange website</text>
+  <text class="s" x="40" y="106">Reports are downloaded</text><text class="s" x="40" y="123">automatically</text>
+
+  <rect class="box" x="24" y="200" width="190" height="78" rx="12"/>
+  <text class="n" x="40" y="224">or</text><text class="t" x="62" y="224">Your own PDF</text>
+  <text class="s" x="40" y="246">Dropped into the app,</text><text class="s" x="40" y="263">checked for safety first</text>
+
+  <!-- reading -->
+  <rect class="box" x="268" y="130" width="196" height="96" rx="12"/>
+  <text class="n" x="284" y="156">2</text><text class="t" x="300" y="156">Read the statements</text>
+  <text class="s" x="284" y="178">Balance sheet, income,</text><text class="s" x="284" y="195">cash flow. Rules, not AI.</text>
+  <text class="s" x="284" y="212">Every number keeps its page.</text>
+
+  <rect class="box" x="510" y="130" width="186" height="96" rx="12"/>
+  <text class="n" x="526" y="156">3</text><text class="t" x="542" y="156">Check the sums</text>
+  <text class="s" x="526" y="178">Totals must add up. You</text><text class="s" x="526" y="195">can check any value</text>
+  <text class="s" x="526" y="212">against its page.</text>
+
+  <!-- outputs -->
+  <rect class="key" x="742" y="28" width="194" height="62" rx="12"/>
+  <text class="t" x="758" y="54">Overview</text><text class="s" x="758" y="74">What the numbers say</text>
+  <rect class="key" x="742" y="104" width="194" height="62" rx="12"/>
+  <text class="t" x="758" y="130">Valuation</text><text class="s" x="758" y="150">What it may be worth</text>
+  <rect class="box" x="742" y="180" width="194" height="62" rx="12"/>
+  <text class="t" x="758" y="206">Excel, CSV, JSON</text><text class="s" x="758" y="226">Take the data anywhere</text>
+  <rect class="box" x="742" y="256" width="194" height="62" rx="12"/>
+  <text class="t" x="758" y="282">API</text><text class="s" x="758" y="302">For programs</text>
+
+  <path class="l" d="M214 99 C240 99 240 160 266 165"/>
+  <path class="l" d="M214 239 C240 239 240 190 266 190"/>
+  <path class="l" d="M464 178 L508 178"/>
+  <path class="l" d="M696 170 C720 170 718 60 740 59"/>
+  <path class="l" d="M696 174 C720 174 718 135 740 135"/>
+  <path class="l" d="M696 182 C720 182 718 211 740 211"/>
+  <path class="l" d="M696 186 C720 186 718 287 740 287"/>
+
+  <text class="s" x="24" y="340">Everything runs on your computer. Your uploads never leave it and are never published.</text>
+</svg>

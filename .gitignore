@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+build/
+dist/
+# Your data: downloaded reports, the database, uploads, caches, exports. Made on first run, never committed.
+data/
+graphify-out/
+*.xlsx
