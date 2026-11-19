@@ -103,13 +103,20 @@ def reachable(timeout: float = 15) -> bool:
 
 
 def run(everything: bool = False, log=print) -> int:
+    conn = store.connect(paths.db_path())
+    try:
+        return _run(conn, everything, log)
+    finally:
+        conn.close()   # Windows keeps an open database file locked
+
+
+def _run(conn, everything: bool, log) -> int:
     """The update itself. everything=False: annual reports only (about 700 MB the first time);
     True adds half-year and quarterly reports (about 2.5 GB in all)."""
     from src.collect import csx, market
     from src.collect.ingest import read_all
     _lower_priority()
     kinds = ("annual", "semiannual", "quarterly") if everything else ("annual",)
-    conn = store.connect(paths.db_path())
     store.init_db(conn)
     st = {"state": "running", "phase": "Looking for new reports on the exchange", "done": 0, "total": 0,
           "started": datetime.now().isoformat(timespec="seconds"), "new_reports": 0, "read": 0}

@@ -38,7 +38,7 @@ def seed(conn):
 
 class ApiData(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         os.environ["CSX_DATA_DIR"] = self.tmp.name
         from src.core import paths
         self.conn = store.connect(paths.db_path())
@@ -102,7 +102,7 @@ class ApiData(unittest.TestCase):
 class ApiServer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tmp = tempfile.TemporaryDirectory()
+        cls.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         os.environ["CSX_DATA_DIR"] = cls.tmp.name
         from src.core import paths
         conn = store.connect(paths.db_path())
@@ -181,7 +181,7 @@ class Workbook(unittest.TestCase):
     def test_company_workbook_public_has_no_uploads(self):
         import io
         import zipfile
-        tmp = tempfile.TemporaryDirectory()
+        tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.addCleanup(tmp.cleanup)
         conn = store.connect(Path(tmp.name) / "t.sqlite")
         store.init_db(conn)
@@ -246,7 +246,7 @@ class StandardExport(unittest.TestCase):
     """Standardised statements for programs: JSON, CSV, schema."""
 
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.conn = store.connect(Path(self.tmp.name) / "t.sqlite")
         store.init_db(self.conn)
         seed(self.conn)
@@ -314,7 +314,7 @@ class StandardExport(unittest.TestCase):
 class NewestReportWins(unittest.TestCase):
     def test_later_period_wins_even_when_uploaded_first(self):
         """Two uploads on the same day: the report covering the later year wins, whatever the upload order."""
-        tmp = tempfile.TemporaryDirectory()
+        tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.addCleanup(tmp.cleanup)
         conn = store.connect(Path(tmp.name) / "t.sqlite")
         store.init_db(conn)
@@ -334,7 +334,7 @@ class NewestReportWins(unittest.TestCase):
 
 class RereadKeepsReviews(unittest.TestCase):
     def test_checked_and_fixed_values_survive_a_reread(self):
-        tmp = tempfile.TemporaryDirectory()
+        tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.addCleanup(tmp.cleanup)
         conn = store.connect(Path(tmp.name) / "t.sqlite")
         store.init_db(conn)

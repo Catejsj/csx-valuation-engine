@@ -67,7 +67,7 @@ def _industrial(y):
 
 class Engine(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.conn = store.connect(Path(self.tmp.name) / "t.sqlite")
         store.init_db(self.conn)
         self.cfg = Path(self.tmp.name) / "config"

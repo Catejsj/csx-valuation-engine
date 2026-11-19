@@ -13,7 +13,7 @@ from tests.test_schema import SHA, make_fact
 
 class StoreTests(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.conn = store.connect(Path(self.tmp.name) / "t.sqlite")
         store.init_db(self.conn)
         store.add_issuer(self.conn, Issuer(id="TEST", name="Test Plc", reporting_currency="KHR"))
@@ -80,7 +80,7 @@ class StoreTests(unittest.TestCase):
 
 class PathTests(unittest.TestCase):
     def test_env_override(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             target = Path(tmp) / "nested"
             old = os.environ.get("CSX_DATA_DIR")
             os.environ["CSX_DATA_DIR"] = str(target)

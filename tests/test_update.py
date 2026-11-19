@@ -9,7 +9,7 @@ from src import update
 
 class UpdateStatus(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.env = mock.patch.dict(os.environ, {"CSX_DATA_DIR": self.tmp.name})
         self.env.start()
 

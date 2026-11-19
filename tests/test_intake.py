@@ -76,7 +76,7 @@ class FileGate(unittest.TestCase):
 
 class Ingest(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.old = os.environ.get("CSX_DATA_DIR")
         os.environ["CSX_DATA_DIR"] = self.tmp.name
         self.conn = store.connect(Path(self.tmp.name) / "facts.sqlite")
@@ -119,7 +119,7 @@ class Ingest(unittest.TestCase):
 
 class PublicAndCoverage(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.conn = store.connect(Path(self.tmp.name) / "t.sqlite")
         store.init_db(self.conn)
         store.add_issuer(self.conn, Issuer(id="TEST", name="Test Plc"))

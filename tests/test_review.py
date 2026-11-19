@@ -18,7 +18,7 @@ from tests.test_schema import SHA, make_fact
 
 class ReviewActions(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.conn = store.connect(Path(self.tmp.name) / "t.sqlite")
         store.init_db(self.conn)
         store.add_issuer(self.conn, Issuer(id="TEST", name="Test Plc"))
@@ -79,7 +79,7 @@ class ServerGuards(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.tmp = tempfile.TemporaryDirectory()
+        cls.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         cls.old_env = os.environ.get("CSX_DATA_DIR")
         os.environ["CSX_DATA_DIR"] = cls.tmp.name
         from src.review.server import Handler

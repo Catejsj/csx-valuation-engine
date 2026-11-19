@@ -17,7 +17,7 @@ from tests.test_schema import SHA, make_fact
 
 class UploadFixes(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.old = os.environ.get("CSX_DATA_DIR")
         os.environ["CSX_DATA_DIR"] = self.tmp.name
         self.conn = store.connect(Path(self.tmp.name) / "facts.sqlite")
@@ -84,7 +84,7 @@ class PeriodTypes(unittest.TestCase):
 
 class ReportNumbers(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.conn = store.connect(Path(self.tmp.name) / "t.sqlite")
         store.init_db(self.conn)
         store.add_issuer(self.conn, Issuer(id="TEST", name="Test Plc", reporting_currency="USD"))
@@ -134,7 +134,7 @@ class IncludeSwitch(unittest.TestCase):
     """Switched-off files stay saved but stop counting in numbers and coverage."""
 
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.conn = store.connect(Path(self.tmp.name) / "t.sqlite")
         store.init_db(self.conn)
         store.add_issuer(self.conn, Issuer(id="TEST", name="Test Plc", reporting_currency="USD"))
@@ -176,7 +176,7 @@ class IncludeSwitch(unittest.TestCase):
 
 class ValueFixes(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.conn = store.connect(Path(self.tmp.name) / "t.sqlite")
         store.init_db(self.conn)
         store.add_issuer(self.conn, Issuer(id="TEST", name="Test Plc"))
@@ -215,7 +215,7 @@ class StatementLabels(unittest.TestCase):
     """Detected statements are shown, and a person can relabel pages of an upload."""
 
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.old = os.environ.get("CSX_DATA_DIR")
         os.environ["CSX_DATA_DIR"] = self.tmp.name
         self.conn = store.connect(Path(self.tmp.name) / "facts.sqlite")
@@ -257,7 +257,7 @@ class StatementLabels(unittest.TestCase):
 class BankReport(unittest.TestCase):
     """A bank prints no revenue: it gets operating income, cost to income, cost of risk and the like."""
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.conn = store.connect(Path(self.tmp.name) / "t.sqlite")
         store.init_db(self.conn)
         store.add_issuer(self.conn, Issuer(id="BNKX", name="Bank Plc", reporting_currency="USD"))
