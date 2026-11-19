@@ -15,7 +15,8 @@ numbers, then explains what those numbers say and what each company may be worth
 - **Values the company** with a method that fits its industry. You get a range, every step of the maths,
   and where each input comes from.
 - **Lets you take the data away** as an Excel workbook, a CSV or JSON file, or a small API.
-- **Reads your own reports too**, for companies that aren't listed. Your files stay on your computer.
+- **Reads your own reports too**, for companies that aren't listed ([how](#add-your-own-reports)). Your
+  files stay on your computer.
 
 ## Start (no coding needed)
 
@@ -40,6 +41,26 @@ Windows may say "Windows protected your PC": click **More info**, then **Run any
 about opening the file only the first time.
 
 Something not working? See [If something goes wrong](docs/TUTORIAL.md#if-something-goes-wrong).
+
+## Add your own reports
+
+You aren't limited to the companies on the exchange. Click **Files** in the app, choose the kind of report
+(annual, half-year, quarterly), give the company a short code and a name, and drop the PDF. The app runs
+three checks and shows what it found before anything is used:
+
+1. **Safe file:** a real PDF, not encrypted, with no scripts or attached files.
+2. **Statements found:** balance sheet, income statement and cash flow statement.
+3. **Sums add up:** totals match their rows, and the balance sheet balances.
+
+Your report then gets the same overview, valuation (pick its sector) and exports as a listed company. It
+stays on your computer: uploads are never published or sent anywhere. Add one file at a time, so you see
+each result before the next. If a statement was missed, **Edit pages** lets you point it at the right
+pages.
+
+**What reads well:** text PDFs in English (not scans) with the three statements laid out the usual way for
+company accounts (IFRS style, as Cambodian companies and most of Asia and Europe print them), with amounts
+in US dollars or riel. **Not yet:** US 10-K filings and amounts in other currencies, scanned pages, and
+Khmer-language reports. A file it can't read is refused with the reason; it never guesses numbers.
 
 ## Commands (optional)
 
@@ -68,8 +89,8 @@ All the commands, including the rarely used ones, are in [docs/COMMANDS.md](docs
 - **Internet:** the first update downloads about 700 MB of annual reports. Add quarterly reports with
   `csx update --all` (about 2.5 GB). It needs a network that can reach csx.com.kh. When the site doesn't
   answer, the app keeps working with the data it already has.
-- **What it can read:** English text PDFs. It can't read scanned pages or Khmer-language reports yet. No
-  layout is guaranteed: a report it can't read is listed as not read, and you never get made-up numbers.
+- **What it can read:** see [Add your own reports](#add-your-own-reports). No layout is guaranteed: a report
+  it can't read is listed as not read, and you never get made-up numbers.
 - **Everything runs on your computer.** Your uploads are never published.
 - **Not investment advice.** The valuations are estimates for learning, built from public reports and
   assumptions you can change.
