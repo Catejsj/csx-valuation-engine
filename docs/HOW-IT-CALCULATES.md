@@ -18,9 +18,14 @@ You can check everything yourself: the Excel workbook has the ratios as live for
 
 - **Read from the page.** Each value is read from the financial statements in a report, with its page
   number, so you can always go back and look.
-- **Newest report wins.** A report usually shows this year and last year. When two reports give a
-  different figure for the same year (a company sometimes changes last year's numbers), the app uses the
-  report that covers the later period, and shows you the old and new figures.
+- **Newest report wins, one report per statement.** A report usually shows this year and last year. When
+  two reports both print a year's statement, the app takes **every line** of that statement from the report
+  that covers the later period, and never mixes lines from the two (a restated total with an old subtotal
+  would no longer add up). It shows you the figures that changed.
+- **The same line, however it is worded.** "Acquisition of property and equipment", "Purchase of property,
+  plant and equipment" and "Additions to fixed assets" all count as capital spending; "Loans and
+  borrowings", "Borrowings" and "Bank loans" as debt; and so on. The report, the valuation and the exports
+  all use these same standard lines.
 - **Only switched-on reports count.** Reports you switch off in Files are left out of everything.
 - **Riel to dollars.** Reports in riel are turned into US dollars for the valuation, using the published
   exchange rate: balance sheet figures at the rate on the last day of the year, income and cash flow
@@ -40,7 +45,8 @@ unnoticed.
 ## 3. Figures and ratios
 
 These are the rows in "The numbers" on each company page. "Average" means the average of this year and
-last year, which is fairer when a company grew during the year.
+last year, which is fairer when a company grew during the year. A ratio that needs last year (growth, or
+an average) is left blank when last year is missing, rather than worked out a different way.
 
 ### Most companies
 
@@ -96,7 +102,7 @@ The "What the statements say" cards are sentences built from the rows above:
 | Profitability | Operating and net margin now against the first year, in percentage points; return on equity now and on average. Banks: cost to income and cost of risk. |
 | Cash | Cash from operations ÷ profit, added up over all years; how many years free cash flow was positive. Not used for banks. |
 | Debt and safety | Net debt, debt to equity, net debt to EBITDA, interest cover, current ratio. Banks: equity to assets, loans to deposits. |
-| What it means for the value | Return on equity (average of the last 3 years) against the cost of equity (section 5.1); price to book = market cap ÷ equity; price to earnings = market cap ÷ last year's profit; the model's range against the market cap. |
+| What it means for the value | Return on equity (average of up to the last 3 years, in dollars like the cost of equity) against the cost of equity (section 5.1); price to book = market cap ÷ equity; price to earnings = market cap ÷ last year's profit; the model's range against the market cap. |
 
 The coloured dot follows simple rules. Green means rising or comfortable; red means falling; yellow
 ("worth a closer look") means one of these common rules of thumb is crossed: cash from operations below
@@ -166,34 +172,44 @@ pick the sector in the app.
 **The idea:** take the cash the business makes after investing, assume it grows for five years, then
 grows slowly forever; bring all of it back to today at the WACC; then take away what is owed to lenders.
 
-1. **Free cash flow** each of the last 3 years = cash from operations − capital spending. The **base** is
-   their average (one good or bad year doesn't decide the value).
-2. **Growth for years 1 to 5** = the company's own yearly revenue growth, kept between 0% and 10%.
+1. **Free cash flow** each of the last 3 years = cash from operations − capital spending − intangible
+   assets bought (licences, software) − investment property bought. The **base** is their average (one
+   good or bad year doesn't decide the value).
+2. **Growth for years 1 to 5** = the company's own yearly revenue growth, kept between −10% and +10%. A
+   shrinking company is projected to keep shrinking; holding it at zero would overvalue it.
 3. **Each year's value today** = that year's cash ÷ (1 + WACC)^year.
 4. **Terminal value** (everything after year 5) = year-5 cash × (1 + g) ÷ (WACC − g), where g = 2.5% a
    year forever, then brought back to today like the other years.
 5. **Enterprise value** = the sum of steps 3 and 4.
 6. **Equity value** = enterprise value − debt (borrowings, bonds and leases) + cash.
+7. **Cross-check:** the same steps on the latest year's free cash flow alone. If it is far from the base
+   (more than 2×), the app warns that the value depends on the method. If free cash flow fell every year,
+   it says the average may be too high.
 
-**Worked example, CamGSM (FY2025, US dollars):**
+**Worked example, Phnom Penh SEZ (PPSP, FY2025, US dollars):**
 
 | Step | Calculation | Result |
 |---|---|---|
-| Cost of equity | 5.07% + 0.761 × 4.23% + 7.12% | 15.41% |
-| WACC | with cost of debt 8.81% (finance costs ÷ debt), tax 20% | 14.17% |
-| Free cash flow 2023 | 76.4M − 17.6M | 58.8M |
-| Free cash flow 2024 | 47.3M − 30.6M | 16.7M |
-| Free cash flow 2025 | 65.4M − 25.7M | 39.6M |
-| Base | average of the three | 38.4M |
-| Growth years 1–5 | revenue fell 2.96% a year, kept at the 0% floor | 0% |
-| Years 1–5 today | 38.4M a year, each ÷ 1.1417^year | 131.2M |
-| Terminal value | 38.4M × 1.025 ÷ (0.1417 − 0.025) | 337.1M |
-| …today | 337.1M ÷ 1.1417^5 | 173.8M |
-| Enterprise value | 131.2M + 173.8M | 305.0M |
-| Equity value | 305.0M − debt 338.5M + cash 101.9M | **68.4M** |
+| Cost of equity | 5.07% + 0.710 × 4.23% + 7.12% | 15.19% |
+| WACC | with cost of debt 8.27% (finance costs ÷ debt), tax 20% | 13.46% |
+| Free cash flow 2023 | 14.5M − 9.7M + after-tax interest paid 0.9M (paid inside operating cash) | 5.8M |
+| Free cash flow 2024 | 1.6M − 2.1M + 0.6M | 0.1M |
+| Free cash flow 2025 | 9.8M − 2.9M + 0.3M | 7.2M |
+| Base | average of the three | 4.4M |
+| Growth years 1–5 | revenue grew 16.1% a year, kept at the 10% cap | 10% |
+| Years 1–5 today | 4.8M, 5.3M, 5.8M, 6.4M, 7.0M, each ÷ 1.1346^year | 19.9M |
+| Terminal value | 7.0M × 1.025 ÷ (0.1346 − 0.025) | 65.7M |
+| …today | 65.7M ÷ 1.1346^5 | 35.0M |
+| Enterprise value | 19.9M + 35.0M | 54.9M |
+| Equity value | 54.9M − debt 14.5M + cash 16.6M | **57.0M** |
 
-The market valued CamGSM at about 1.95bn, far above this. The overview card says what that implies: the
-price assumes much more growth, higher returns or lower risk than the model does.
+The market cap is 57.0M, inside the range (50.8M to 65.1M). The cross-check on 2025's cash flow alone
+gives 92.4M, because 2024 was a weak year: a reminder that the base is an average.
+
+**When there is no value.** CamGSM is an example: once the 20M it paid for licences in 2025 is counted
+and its shrinking revenue is projected to keep shrinking, its debt (338.5M) is larger than the value of
+its cash flows, so the app shows "No meaningful value" instead of a number. Its market cap is about 1.95bn:
+the price assumes far more growth or far less risk than its reported cash flows support.
 
 ### 5.4 Residual income (banks)
 
@@ -205,24 +221,33 @@ price assumes much more growth, higher returns or lower risk than the model does
 3. **Excess return** each year = (return on equity − cost of equity) × book equity at the start of the year.
 4. Book equity grows each year by return on equity × the share of profit kept (not paid as dividends).
 5. **Value** = book equity + the excess returns of years 1 to 5 brought back to today + a terminal value
-   for the years after, worked out the same way as in 5.3.
+   for the years after. After year 5 the excess return **fades by 0.62 a year** (each year's is 0.62 times
+   the one before): terminal value = year-5 excess return × 0.62 ÷ (1 + cost of equity − 0.62). 0.62 is
+   the average persistence measured by Dechow, Hutton and Sloan (1999). Returns above or below what
+   investors require tend to fade as competitors respond or a weak bank is fixed, so assuming they last
+   forever would push the value too far either way.
 
 **Worked example, ACLEDA (FY2025):** book equity 1,657M; return on equity 10.70% (average of 10.97%,
 8.45%, 12.68%); cost of equity 14.67%. ACLEDA earns about 4 points less than investors require, so each
-year's excess return is negative (year 1: (10.70% − 14.67%) × 1,657M = −65.8M). The value comes out
-below book: **1,021M**, against a market cap of 1,088M ("within the range").
+year's excess return is negative (year 1: (10.70% − 14.67%) × 1,657M = −65.8M; five years together are
+worth −255.6M today). After year 5 the shortfall fades (−53.3M today). Value: 1,657M − 255.6M − 53.3M =
+**1,348.5M**, about 0.81× book, against a market cap of 1,088M ("below the range").
 
-**Cross-check:** justified price-to-book = (return on equity − g) ÷ (cost of equity − g) = 0.67, so
-0.67 × book = 1,117M. When two methods disagree by more than 2×, the app says the value is uncertain.
+**Cross-checks:** if the shortfall lasted forever, growing at 2.5%, the value would be 1,021M; justified
+price-to-book = (return on equity − g) ÷ (cost of equity − g) = 0.67, so 0.67 × book = 1,117M. All three
+are shown in "How it is worked out". When methods disagree by more than 2×, the app says the value is
+uncertain.
 
 ### 5.5 Dividend, cash flow to equity and regulated return (utilities, ports)
 
 - **Dividend model:** the same five-years-then-forever steps as 5.3, on dividends paid, discounted at the
-  cost of equity. Growth = return on equity × the share of profit kept, between 0% and 10%.
+  cost of equity. Growth = return on equity × the share of profit kept, between −10% and 10%.
 - **Cash flow to equity** (when less than 30% of profit is paid out): cash from operations − capital
-  spending + new borrowing − repayments − interest, then the same steps.
-- **Regulated return** (when that cash flow is negative because the company is building a lot): the
-  residual income steps of 5.4, since a regulated utility earns a return on the assets it owns.
+  spending (including intangibles and investment property) + new loans and bonds − repayments of loans,
+  bonds and lease principal − interest, then the same steps.
+- **Regulated return** (when that cash flow is negative, or under 25% of profit, because the company is
+  reinvesting almost everything): the residual income steps of 5.4, since a regulated utility earns a
+  return on the assets it owns. Valuing only the thin cash left over would understate it.
 
 ### 5.6 Book net asset value (property)
 
@@ -237,6 +262,9 @@ The value depends on two guesses, so the app shows what happens when they are a 
 |---|---|---|---|
 | Discount rate | +1 point | as worked out | −1 point |
 | Long-term growth | 2.0% | 2.5% | 3.0% |
+
+(For banks and regulated utilities, whose terminal value fades instead of growing, only the discount rate
+moves the range.)
 
 The full 3 × 3 table is in "How it is worked out" in the app.
 
@@ -267,3 +295,5 @@ The app says so instead of forcing a number:
 | No meaningful value | Free cash flow is negative on average, book equity is zero or negative, or debt is larger than the value of the cash flows |
 
 **Every input not yet checked by a person** is listed next to the result, with its source and date.
+When the newest full year is more than about a year and a half older than the share price, the app says
+so: the value uses old figures, the market cap today's price.
