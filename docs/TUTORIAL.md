@@ -55,6 +55,7 @@ Further down, **What it may be worth** shows a valuation range, a bar with the s
 - The range runs from a careful case to a hopeful one. It is not a target price.
 - "Market cap above / within / below the range" compares what the market pays with the estimate.
 - Open **How it is worked out** to see each step, and **Inputs** to see where every assumption comes from.
+- Every formula, with a worked example, is explained in [How it calculates](HOW-IT-CALCULATES.md).
 - Some companies show "No meaningful value" or "Not enough history". Those are honest answers, not errors.
 
 ## 5. Check a number against its page

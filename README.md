@@ -13,7 +13,7 @@ numbers, then explains what those numbers say and what each company may be worth
 - **Explains them.** A plain-language overview: is the company growing, is it profitable, does the profit
   come in as cash, how much does it owe, and does it earn more than investors require.
 - **Values the company** with a method that fits its industry. You get a range, every step of the maths,
-  and where each input comes from.
+  and where each input comes from ([how it calculates](docs/HOW-IT-CALCULATES.md)).
 - **Lets you take the data away** with one click as an Excel workbook, a CSV or a JSON file, or through a
   small API.
 - **Reads your own reports too**, for companies that aren't listed ([how](#add-your-own-reports)). Your
@@ -100,6 +100,7 @@ All the commands, including the rarely used ones, are in [docs/COMMANDS.md](docs
 ## More
 
 - [Tutorial](docs/TUTORIAL.md): using the app, step by step
+- [How it calculates](docs/HOW-IT-CALCULATES.md): every formula in plain words, with worked examples
 - [Commands](docs/COMMANDS.md): every command
 - [What a useful filing contains](docs/FILING-GUIDE.md): what makes company reports easy or hard to use, and
   why the US 10-K structure works better
