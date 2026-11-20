@@ -238,8 +238,18 @@ class ProfitLabels(unittest.TestCase):
         for label in ["Profit for the year, representing total comprehensive income for the year",
                       "Profit for the year carried forward to next page", "Net profit for the year"]:
             self.assertEqual(line_items(Statement.INCOME, [R(label)]), ["net_income"], label)
-        self.assertNotEqual(line_items(Statement.INCOME, [R("Profit for the year attributable to owners")]),
-                            ["net_income"])
+        # A breakdown line after the real total is not the profit...
+        names = line_items(Statement.INCOME, [R("Profit for the year"), R("Profit for the year attributable to owners")])
+        self.assertEqual(names[0], "net_income")
+        self.assertNotEqual(names[1], "net_income")
+        # ...but when it is the only profit line printed, it is (MJQE, PAS quarterly reports).
+        for label in ("Profit for the period attributable to shareholders",
+                      "Profit for the periods attributable to shareholders"):
+            self.assertEqual(line_items(Statement.INCOME, [R("Profit before tax"), R(label)])[1], "net_income", label)
+        # A business was sold: the stated total, not the continuing-operations line (PPSP 2022).
+        names = line_items(Statement.INCOME, [R("Profit for the financial period from continuing operation"),
+                                              R("Owners of the Company"), R("Total profit attributable to")])
+        self.assertEqual(names.index("net_income"), 2)
 
 
 class StandardExport(unittest.TestCase):

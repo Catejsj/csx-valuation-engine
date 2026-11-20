@@ -18,6 +18,8 @@ UTF-8, comma, header row), and a JSON Schema for the JSON file.
 """
 from __future__ import annotations
 
+import re
+
 import csv
 import io
 import sqlite3
@@ -113,6 +115,9 @@ STANDARD_ITEMS: dict[str, tuple[str, str, tuple[str, ...]]] = {
                                                                      "drawdown_of_bank_borrowings")),
     "repayments_of_borrowings": ("CF", "Repayments of borrowings", ("repayment_of_borrowings",
                                                                      "repayments_of_bank_borrowings")),
+    "purchase_of_investment_property": ("CF", "Purchase of investment property", ()),
+    "proceeds_from_debt_securities": ("CF", "Proceeds from bonds and other debt securities issued", ()),
+    "repayments_of_debt_securities": ("CF", "Repayments of bonds and other debt securities", ()),
     "lease_payments": ("CF", "Payments of lease liabilities", ("payment_of_lease_liabilities",
                                                                "payments_of_lease_liabilities",
                                                                "payments_of_lease_liabilities_principal")),
@@ -165,10 +170,40 @@ for _code, _more in EXTRA_ALIASES.items():
 _ALIAS = {alias: code for code, (_, _, aliases) in STANDARD_ITEMS.items() for alias in aliases}
 
 
+# Cash flow lines the valuation depends on are worded many ways ("Acquisition of property and
+# equipment", "Proceed from borrowing", "Drawdown of loans", "Dividends paid 4.2.1"). These patterns
+# catch the wordings; each is anchored at the start so look-alikes are not caught ("proceeds from
+# disposal of property", "acquisition ... through liabilities", which is not a cash payment).
+CF_PATTERNS: list[tuple[str, str]] = [
+    (r"(purchases?|acquisitions?|additions?)_(of|to)_(property|plant|fixed_assets)(?!.*(through|disposal))", "capex"),
+    (r"(purchases?|acquisitions?)_of_intangible_assets?$", "purchase_of_intangibles"),
+    (r"(purchases?|acquisitions?)_of_investment_propert(y|ies)$", "purchase_of_investment_property"),
+    (r"(proceeds?|drawdowns?)_(from|of)_(bank_)?(borrowings?|loans?)$|loans_and_borrowings_drawdowns$|drawdown_of_loans$",
+     "proceeds_from_borrowings"),
+    (r"repayments?_(of|to)_(bank_)?(borrowings?|loans?)$", "repayments_of_borrowings"),
+    (r"proceeds_from_(issuance_of_|issue_of_)?(debt_securities|corporate_bonds?|green_bonds?|bonds?)(_issued|_issuance)?$|"
+     r"proceeds_from_debt_securities_(issued|issuance)$", "proceeds_from_debt_securities"),
+    (r"repayments?_of_(debt_securities|corporate_bonds?|bonds?)$", "repayments_of_debt_securities"),
+    (r"(payments?|repayments?)_(of_)?(the_)?(principal_portion_of_)?lease_liabilit(y|ies)$|principal_elements_of_lease_payments$|"
+     r"payments_of_leases$", "lease_payments"),
+    (r"dividends?_paid(_\d+)*$", "dividends_paid"),
+]
+
+
+BS_PATTERNS: list[tuple[str, str]] = [
+    (r"(cash_and_bank_balances|bank_balances|cash_at_banks?_and_on_hand|cash_and_bank|cash)$", "cash_and_equivalents"),
+    (r"(loans_and_borrowings|bank_borrowings|bank_loans|term_loans|borrowings_from_banks)$", "borrowings"),
+    (r"(corporate_bonds?|bonds?|debentures)(_payable)?$", "debt_securities"),
+]
+
+
 def standard_code(statement: str, stored: str) -> tuple[str, bool]:
     """Map a stored line-item name to (code, is_standard). Balance sheet items printed in both
     the current and non-current sections keep their suffix (borrowings_current)."""
     base, suffix = stored, ""
+    m = re.fullmatch(r"(total_(?:non_)?current_(?:assets|liabilities))_(?:non_)?current", base) if statement == "BS" else None
+    if m:
+        base = m.group(1)      # stored before the fix: "total_current_assets_current"
     if statement == "BS" and base.endswith("_net"):
         base = base[:-4]                    # "Property and equipment - net"
     if statement == "BS":
@@ -177,6 +212,12 @@ def standard_code(statement: str, stored: str) -> tuple[str, bool]:
                 base, suffix = base[: -len(s)], s
                 break
     code = base if base in STANDARD_ITEMS else _ALIAS.get(base)
+    if code is None and statement == "CF":
+        code = next((c for rx, c in CF_PATTERNS if re.match(rx, base)), None)
+    if code is None and statement == "BS":
+        if base == "borrowings_net_of_current_portion":
+            base, suffix = "borrowings", "_non_current"
+        code = next((c for rx, c in BS_PATTERNS if re.match(rx, base)), None) if base != "borrowings" else "borrowings"
     if code and statement in STANDARD_ITEMS[code][0].split():
         return code + suffix, True
     return stored, False
@@ -208,11 +249,15 @@ def rows(conn: sqlite3.Connection, issuer_id: str, *, official_only: bool = True
             WHERE f.issuer_id = ? AND g.included = 1 AND f.check_status != 'failed'
               AND f.statement IN ('BS','IS','CF') {only}
             ORDER BY {NEWEST_ORDER}, f.id""", (issuer_id, issuer_id)).fetchall()
+    from src.core.store import statement_winners
+    win = statement_winners(conn, issuer_id, official_only=official_only)
     latest: dict[tuple, dict] = {}
     taken: dict[tuple, str] = {}    # one standard code per printed line within a report
     for r in found:
         if period_types and r["period_type"] not in period_types:
             continue
+        if win.get((r["statement"], r["period_end"], r["period_type"])) != r["filing_id"]:
+            continue    # an older version of this statement: never mix its lines with the newer one
         code, standard = standard_code(r["statement"], r["line_item"])
         slot = (r["filing_id"], r["statement"], r["period_end"], r["period_type"], code)
         if standard and taken.setdefault(slot, r["line_item"]) != r["line_item"]:

@@ -37,14 +37,24 @@ def _facts_by_year(conn: sqlite3.Connection, issuer: str,
                    official_only: bool = False) -> dict[tuple[str, str, int], Value]:
     only = " AND g.origin = 'official'" if official_only else ""
     rows = conn.execute(f"""
-        SELECT f.statement, f.line_item, CAST(substr(f.period_end,1,4) AS INTEGER) AS y,
+        SELECT f.statement, f.line_item, CAST(substr(f.period_end,1,4) AS INTEGER) AS y, f.period_end, f.period_type,
                f.value_as_reported, f.scale, f.page, f.filing_id, g.published_on, g.origin
         FROM facts f JOIN filings g ON g.id = f.filing_id {store.NEWEST_JOIN}
         WHERE f.issuer_id = ? AND f.period_type = 'FY' AND f.check_status != 'failed' AND g.included = 1{only}
         ORDER BY {store.NEWEST_ORDER}, f.id""", (issuer, issuer)).fetchall()
+    from src.export.standard import standard_code
+    win = store.statement_winners(conn, issuer, official_only=official_only)
     out: dict[tuple[str, str, int], Value] = _Facts()
-    for r in rows:   # later (newer) filings overwrite earlier ones
-        out[(r["statement"], r["line_item"], r["y"])] = Value(
+    taken: dict[tuple, str] = {}
+    for r in rows:   # one report per statement and year: the newest that prints it
+        if win.get((r["statement"], r["period_end"], r["period_type"])) != r["filing_id"]:
+            continue
+        # the same standard codes as the valuation and the exports ("Total revenue" -> revenue,
+        # "Loans and borrowings" -> borrowings), so the page and the valuation read the same lines
+        code, standard = standard_code(r["statement"], r["line_item"])
+        if standard and taken.setdefault((r["statement"], r["y"], code), r["line_item"]) != r["line_item"]:
+            code = r["line_item"]     # two printed lines would share a code: keep the second apart
+        out[(r["statement"], code, r["y"])] = Value(
             Decimal(r["value_as_reported"]) * int(r["scale"]), {(r["filing_id"], r["page"])}, r["origin"] == "upload")
     return out
 
@@ -106,6 +116,12 @@ def build_report(conn: sqlite3.Connection, issuer: str, official_only: bool = Fa
 
     def get(stmt, item, y):
         v = facts.get((stmt, item, y))
+        if v is None and stmt == "BS":     # printed as its current / non-current parts only
+            parts = [facts.get((stmt, f"{item}{sfx}", y)) for sfx in ("_current", "_non_current")]
+            parts = [p for p in parts if p is not None]
+            if parts:
+                v = Value(sum((p.amount for p in parts), Decimal(0)), set().union(*(p.pages for p in parts)),
+                          any(p.upload for p in parts))
         if v is not None:
             pages_used.setdefault(item, set()).update(v.pages)
         return v.amount if v is not None else None
@@ -184,10 +200,9 @@ def build_report(conn: sqlite3.Connection, issuer: str, official_only: bool = Fa
     ratio("net_margin", "Net margin", "pct", lambda y: div(ni.values[y], rev.values[y]), "profit ÷ revenue",
           ["net_income", "revenue"])
 
-    def roe(y):
+    def roe(y):   # needs last year's equity too: no average, no ratio (never half one definition, half another)
         e0, e1 = equity.values.get(y - 1), equity.values[y]
-        base = (e0 + e1) / 2 if e0 is not None and e1 is not None else e1
-        return div(ni.values[y], base)
+        return div(ni.values[y], (e0 + e1) / 2) if e0 is not None and e1 is not None else None
     ratio("roe", "Return on equity", "pct", roe, "profit ÷ average equity (this and last year)", ["net_income", "total_equity"])
     ratio("roa", "Return on assets", "pct", lambda y: div(ni.values[y], assets.values[y]), "profit ÷ total assets",
           ["net_income", "total_assets"])
@@ -252,7 +267,7 @@ def build_report(conn: sqlite3.Connection, issuer: str, official_only: bool = Fa
 
         def avg(m, y):
             a0, a1 = m.values.get(y - 1), m.values[y]
-            return (a0 + a1) / 2 if a0 is not None and a1 is not None else a1
+            return (a0 + a1) / 2 if a0 is not None and a1 is not None else None
 
         ratio("operating_income_growth", "Operating income growth", "pct", growth(oi),
               "operating income ÷ last year's − 1", ["operating income (2 years)"])

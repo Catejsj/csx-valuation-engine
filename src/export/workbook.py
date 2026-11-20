@@ -36,7 +36,7 @@ LICENCE = ("Free for study, teaching, research and student competitions; commerc
 def _statement_rows(conn: sqlite3.Connection, issuer: str, stmt: str, official_only: bool):
     only = " AND g.origin='official'" if official_only else ""
     rows = conn.execute(f"""
-        SELECT f.id, f.line_item, f.label_as_printed, CAST(substr(f.period_end,1,4) AS INTEGER) y,
+        SELECT f.id, f.line_item, f.label_as_printed, CAST(substr(f.period_end,1,4) AS INTEGER) y, f.period_end,
                f.value_as_reported, f.scale, f.page, f.check_status, f.filing_id, g.published_on
         FROM facts f JOIN filings g ON g.id=f.filing_id {store.NEWEST_JOIN}
         WHERE f.issuer_id=? AND f.statement=? AND f.period_type='FY' AND f.check_status!='failed'
@@ -44,7 +44,10 @@ def _statement_rows(conn: sqlite3.Connection, issuer: str, stmt: str, official_o
         ORDER BY {store.NEWEST_ORDER}, f.id""", (issuer, issuer, stmt)).fetchall()
     values: dict[tuple[str, int], dict] = {}
     order: dict[str, tuple[str, int, int]] = {}   # line_item -> (label, published rank, id)
-    for r in rows:   # newer reports overwrite older ones (restatements)
+    win = store.statement_winners(conn, issuer, official_only=official_only)
+    for r in rows:   # one report per statement and year: the newest that prints it
+        if win.get((stmt, r["period_end"], "FY")) != r["filing_id"]:
+            continue
         values[(r["line_item"], r["y"])] = dict(r)
         order[r["line_item"]] = (r["label_as_printed"], r["published_on"], r["id"])
     newest = max((v[1] for v in order.values()), default="")
@@ -129,8 +132,10 @@ def build_workbook(conn: sqlite3.Connection, issuer: str, *, official_only: bool
     for key, stmt, item, label in HELPERS:
         _, _, values, _ = _statement_rows(conn, issuer, stmt, official_only)
         vals = []
-        for y in years:
-            v = values.get((item, y))
+        from src.export.standard import standard_code
+        for y in years:   # by standard code, like the report ("Total current assets" printed any way)
+            v = values.get((item, y)) or next((x for (raw, yy), x in values.items()
+                                               if yy == y and standard_code(stmt, raw) == (item, True)), None)
             vals.append(Decimal(v["value_as_reported"]) * int(v["scale"]) if v else None)
         helpers[key] = sm.row([label] + vals + ["as printed"], styles=["text"] + ["money"] * len(years) + ["note"])
     at.update(helpers)
@@ -150,12 +155,14 @@ def build_workbook(conn: sqlite3.Connection, issuer: str, *, official_only: bool
     def simple(a: str, b: str):
         return lambda i: f"{c(a, i)}/{c(b, i)}" if c(a, i) and c(b, i) else None
 
+    def prev(i: int) -> bool:      # last year's column is really last year (no missing year in between)
+        return i > 0 and years[i] - years[i - 1] == 1
+
     def growth(key: str):
-        return lambda i: f"{c(key, i)}/{c(key, i - 1)}-1" if i and key in at else None
+        return lambda i: f"{c(key, i)}/{c(key, i - 1)}-1" if prev(i) and key in at else None
 
     def on_avg(a: str, b: str):
-        return lambda i: (f"{c(a, i)}/AVERAGE({c(b, i - 1)},{c(b, i)})" if i else f"{c(a, i)}/{c(b, i)}") \
-            if a in at and b in at else None
+        return lambda i: f"{c(a, i)}/AVERAGE({c(b, i - 1)},{c(b, i)})" if prev(i) and a in at and b in at else None
 
     if rep.get("kind") == "bank":
         ratio("Operating income growth", "pct", growth("operating_income"), "operating income ÷ last year's − 1")
@@ -164,22 +171,21 @@ def build_workbook(conn: sqlite3.Connection, issuer: str, *, official_only: bool
               "net interest income ÷ average total assets")
         ratio("Cost to income", "pct", lambda i: f"-{c('operating_costs', i)}/{c('operating_income', i)}"
               if "operating_costs" in at and "operating_income" in at else None, "operating costs ÷ operating income")
-        ratio("Cost of risk", "pct", lambda i: (f"-{c('impairment', i)}/AVERAGE({c('loans', i - 1)},{c('loans', i)})"
-              if i else f"-{c('impairment', i)}/{c('loans', i)}") if "impairment" in at and "loans" in at else None,
+        ratio("Cost of risk", "pct", lambda i: f"-{c('impairment', i)}/AVERAGE({c('loans', i - 1)},{c('loans', i)})"
+              if prev(i) and "impairment" in at and "loans" in at else None,
               "loan loss charges ÷ average loans")
         ratio("Loans to deposits", "x", simple("loans", "deposits"), "loans ÷ customer deposits")
         ratio("Equity to assets", "pct", simple("total_equity", "total_assets"), "equity ÷ total assets")
         ratio("Return on equity", "pct", on_avg("net_income", "total_equity"), "profit ÷ average equity")
         ratio("Return on assets", "pct", on_avg("net_income", "total_assets"), "profit ÷ average total assets")
     else:
-        ratio("Revenue growth", "pct", lambda i: f"{c('revenue', i)}/{c('revenue', i - 1)}-1" if i and 'revenue' in at else None,
+        ratio("Revenue growth", "pct", growth("revenue"),
               "revenue ÷ last year's revenue − 1")
         ratio("Operating margin", "pct", simple("operating_profit", "revenue"), "operating profit ÷ revenue")
         ratio("EBITDA margin", "pct", simple("ebitda", "revenue"), "EBITDA ÷ revenue")
         ratio("Net margin", "pct", simple("net_income", "revenue"), "profit ÷ revenue")
         ratio("Return on equity", "pct",
-              lambda i: f"{c('net_income', i)}/AVERAGE({c('total_equity', i - 1)},{c('total_equity', i)})"
-              if i and "net_income" in at and "total_equity" in at else None, "profit ÷ average equity (this and last year)")
+              on_avg("net_income", "total_equity"), "profit ÷ average equity (this and last year)")
         ratio("Return on assets", "pct", simple("net_income", "total_assets"), "profit ÷ total assets")
         ratio("Debt to equity", "x", simple("debt", "total_equity"), "borrowings and bonds ÷ equity")
         ratio("Net debt to EBITDA", "x", simple("net_debt", "ebitda"), "net debt ÷ EBITDA")

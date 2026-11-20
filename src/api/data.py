@@ -164,8 +164,12 @@ def facts(conn: sqlite3.Connection, issuer_id: str, *, statement: str | None = N
                        "pdf_sha256": r.pop("pdf_sha256"), "page": r.pop("page")}
     if all_versions:
         return rows
+    from src.core.store import statement_winners
+    win = statement_winners(conn, issuer_id, official_only=True)
     latest: dict[tuple, dict] = {}
-    for r in rows:    # ordered by publication date, so newer filings overwrite older ones
+    for r in rows:    # one report per statement and period: the newest that prints it
+        if win.get((r["statement"], r["period_end"], r["period_type"])) != r["source"]["filing_id"]:
+            continue
         latest[(r["statement"], r["period_end"], r["period_type"], r["line_item"])] = r
     return list(latest.values())
 

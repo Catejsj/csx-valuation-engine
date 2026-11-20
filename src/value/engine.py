@@ -41,6 +41,7 @@ def _need_years(model: str) -> int:
 
 
 LOW_PAYOUT = 0.30   # below this, a dividend model shows only a small part of the value
+THIN_FCFE = 0.25    # FCFE below this share of profit: heavy reinvestment, use the regulated-return view
 
 
 def value(conn: sqlite3.Connection, issuer_id: str, *, official_only: bool = True,
@@ -83,6 +84,12 @@ def value(conn: sqlite3.Connection, issuer_id: str, *, official_only: bool = Tru
         return _finish(out, a)
     last = full[-1]
     out["base_year"] = last.end
+    try:
+        _r, _how = _avg_roe(full)
+        out["roe_avg_usd"] = _r                     # in dollars, like the cost of equity
+        out["roe_avg_years"] = [h[:4] for h in _how]
+    except ValueError:
+        pass
     if any(y.fx for y in full):
         out["notes"].append("KHR figures converted to USD: " + full[-1].fx)
     try:
@@ -139,8 +146,8 @@ def _capital(out, last: inp.Year, mkt, ind, rf, erp, crp, tax, a: Assumptions, *
         beta = models.relever(ind["unlevered"], tax, de)
         how = f"industry unlevered beta {ind['unlevered']} relevered at the industry D/E {de:.2f} (no share price)"
     ke = models.cost_of_equity(rf, beta, erp, crp)
-    cc = {"risk_free_rate": rf, "beta": round(beta, 4), "beta_how": how, "mature_erp": erp,
-          "country_risk_premium": crp, "cost_of_equity": round(ke, 6)}
+    cc = {"risk_free_rate": rf, "beta": beta, "beta_how": how, "mature_erp": erp,   # exact: rounded only for display
+          "country_risk_premium": crp, "cost_of_equity": ke}
     out["steps"].append((f"cost of equity = {_pct(rf)} + {beta:.3f} x {_pct(erp)} + {_pct(crp)}", round(ke, 6)))
     if not bank:
         fin = last.get("finance_costs")
@@ -155,8 +162,8 @@ def _capital(out, last: inp.Year, mkt, ind, rf, erp, crp, tax, a: Assumptions, *
         equity_w = mkt.market_cap_usd if mkt else 1.0
         debt_w = debt if mkt else float(ind["de"])
         w = models.wacc(ke, kd, tax, debt_w, equity_w) if (debt_w + equity_w) > 0 else ke
-        cc.update({"debt_usd": round(debt), "cost_of_debt": round(kd, 6), "cost_of_debt_how": kd_how,
-                   "tax_rate": tax, "wacc": round(w, 6),
+        cc.update({"debt_usd": debt, "cost_of_debt": kd, "cost_of_debt_how": kd_how,
+                   "tax_rate": tax, "wacc": w,
                    "weights": "market value of equity and book debt" if mkt else "industry D/E (no share price)"})
         out["steps"].append((f"WACC with cost of debt {_pct(kd)} ({kd_how}), tax {_pct(tax)}", round(w, 6)))
     out["cost_of_capital"] = cc
@@ -167,10 +174,10 @@ def _growth(full: list[inp.Year], a: Assumptions) -> tuple[float, str]:
     revs = [(y.end, y.get("revenue")) for y in full if y.get("revenue")]
     lo, hi = float(a.forecast["growth_min"]), float(a.forecast["growth_max"])
     if len(revs) >= 2:
-        c = models.cagr(revs[0][1], revs[-1][1], len(revs) - 1)
+        c = models.cagr(revs[0][1], revs[-1][1], int(revs[-1][0][:4]) - int(revs[0][0][:4]))   # years between, not points
         if c is not None:
-            return min(max(c, lo), hi), f"revenue growth {revs[0][0][:4]}-{revs[-1][0][:4]} {_pct(c)}, kept within {_pct(lo)}-{_pct(hi)}"
-    return lo, f"no revenue history; first-stage growth set to {_pct(lo)}"
+            return min(max(c, lo), hi), f"revenue growth {revs[0][0][:4]}-{revs[-1][0][:4]} {_pct(c)}, kept within {_pct(lo)} to {_pct(hi)}"
+    return 0.0, "no revenue history; first-stage growth set to 0%"
 
 
 def _range(fn, base_rate: float, g: float, a: Assumptions) -> dict:
@@ -192,9 +199,12 @@ def _fcff(out, full, a, mkt, ind, rf, erp, crp, g, tax):
             out["missing"].append(f"{y.end[:4]}: no capital expenditure line found; that year is left out")
             continue
         add_back = abs(y.get("interest_paid") or 0.0) * (1 - tax) if y.values.get("_interest_in_cfo") else 0.0
-        f = cfo - abs(capex) + add_back
+        intang = abs(y.get("purchase_of_intangibles") or 0.0) + abs(y.get("purchase_of_investment_property") or 0.0)
+        # licences, spectrum, software and investment property are investment too
+        f = cfo - abs(capex) - intang + add_back
         flows.append(f)
         out["steps"].append((f"FCFF {y.end[:4]} = CFO {_fmt(cfo)} - capex {_fmt(abs(capex))}"
+                             + (f" - intangibles and investment property bought {_fmt(intang)}" if intang else "")
                              + (f" + after-tax interest paid {_fmt(add_back)}" if add_back else ""), round(f)))
     if not flows:
         raise ValueError("no year with both operating cash flow and capital expenditure")
@@ -207,8 +217,8 @@ def _fcff(out, full, a, mkt, ind, rf, erp, crp, g, tax):
     g1, g1_how = _growth(full, a)
     years = int(a.forecast["years"])
     out["steps"].append((f"first-stage growth: {g1_how}", round(g1, 6)))
-    debt, cash = cc["debt_usd"], last.get("cash_and_equivalents") or 0.0
-    if not last.get("cash_and_equivalents"):
+    debt, cash = cc["debt_usd"], last.sum_of("cash_and_equivalents") or 0.0   # also when printed as a "current" line
+    if not last.sum_of("cash_and_equivalents"):
         out["missing"].append("no cash line found; equity value counts no cash")
 
     def equity(rate, gg):
@@ -216,7 +226,18 @@ def _fcff(out, full, a, mkt, ind, rf, erp, crp, g, tax):
     ev = models.fcff_value(base, g1, years, g, cc["wacc"])
     out["steps"] += [(k, round(v)) for k, v in ev.steps]
     out["steps"] += [("enterprise value", round(ev.value)), ("less debt", -round(debt)), ("plus cash", round(cash))]
+    if len(flows) >= 2 and flows[-1] > 0:
+        latest = models.fcff_value(flows[-1], g1, years, g, cc["wacc"]).value - debt + cash
+        out["steps"].append((f"cross-check: same model on the latest year's free cash flow only ({_fmt(flows[-1])})", round(latest)))
+    _trend_note(out, flows, "free cash flow")
     out["value"] = _range(equity, cc["wacc"], g, a)
+
+
+def _trend_note(out, flows, what):
+    """An average hides a steady fall: say so when each year is lower than the one before."""
+    if len(flows) >= 3 and all(b < a for a, b in zip(flows, flows[1:])):
+        out["notes"].append(f"The {what} fell every year ({', '.join(_fmt(f) for f in flows)} USD); the 3-year average "
+                            "used as the base is above the latest year, so the value may be too high.")
 
 
 def _swing_note(out, flows, base, what):
@@ -228,6 +249,8 @@ def _swing_note(out, flows, base, what):
 def _avg_roe(full) -> tuple[float, list[str]]:
     roes, how = [], []
     for prev, cur in zip(full[-4:-1], full[-3:]):
+        if int(cur.end[:4]) - int(prev.end[:4]) != 1:
+            continue    # a missing year in between: no average equity for this year
         e0, e1, ni = prev.get("total_equity"), cur.get("total_equity"), cur.get("net_income")
         if e0 and e1 and ni is not None:
             r = ni / ((e0 + e1) / 2)
@@ -256,11 +279,15 @@ def _bank(out, full, a, mkt, ind, rf, erp, crp, g, tax):
                      ("average return on equity: " + ", ".join(how), round(roe, 6)),
                      (f"payout ratio (dividends / profit, average) {_pct(payout)}; book growth = ROE x retention", round(g_book, 6))]
     ke = cc["cost_of_equity"]
-    r = models.residual_income(book, roe, ke, g_book, years, g)
-    out["steps"] += [(k, round(v)) for k, v in r.steps]
+    w = float(a.forecast.get("excess_return_persistence", 0.62))
+    r = models.residual_income(book, roe, ke, g_book, years, g, persistence=w)
+    out["steps"] += [(k if k != "terminal value" else f"terminal value (the excess return fades by {w:.2f} a year)", round(v))
+                     for k, v in r.steps]
+    forever = models.residual_income(book, roe, ke, g_book, years, g).value
+    out["steps"].append((f"cross-check: if the excess return lasted forever, growing at {_pct(g)}", round(forever)))
     pb = models.justified_pb(roe, ke, g)
     out["steps"].append((f"cross-check: justified P/B = (ROE - g) / (ke - g) = {pb:.2f}, x book", round(pb * book)))
-    out["value"] = _range(lambda k, gg: models.residual_income(book, roe, k, g_book, years, gg).value, ke, g, a)
+    out["value"] = _range(lambda k, gg: models.residual_income(book, roe, k, g_book, years, gg, persistence=w).value, ke, g, a)
 
 
 def _dividend(out, full, a, mkt, ind, rf, erp, crp, g, tax):
@@ -297,20 +324,32 @@ def _fcfe(out, full, a, cc, roe, payout, g, tax, d0):
         if capex is None:
             out["missing"].append(f"{y.end[:4]}: no capital expenditure line found; that year is left out")
             continue
-        net_borrowing = (y.get("proceeds_from_borrowings") or 0.0) - abs(y.get("repayments_of_borrowings") or 0.0)
+        # all debt: loans, bonds, and the principal of leases (counted as debt, as in the cash flow model)
+        net_borrowing = ((y.get("proceeds_from_borrowings") or 0.0) + (y.get("proceeds_from_debt_securities") or 0.0)
+                         - abs(y.get("repayments_of_borrowings") or 0.0) - abs(y.get("repayments_of_debt_securities") or 0.0)
+                         - abs(y.get("lease_payments") or 0.0))
         interest = 0.0 if y.values.get("_interest_in_cfo") else abs(y.get("interest_paid") or 0.0)
-        f = cfo - abs(capex) + net_borrowing - interest
+        intang = abs(y.get("purchase_of_intangibles") or 0.0) + abs(y.get("purchase_of_investment_property") or 0.0)
+        f = cfo - abs(capex) - intang + net_borrowing - interest
         flows.append(f)
-        out["steps"].append((f"FCFE {y.end[:4]} = CFO {_fmt(cfo)} - capex {_fmt(abs(capex))} + net borrowing "
-                             f"{_fmt(net_borrowing)}" + (f" - interest paid {_fmt(interest)}" if interest else ""), round(f)))
+        out["steps"].append((f"FCFE {y.end[:4]} = CFO {_fmt(cfo)} - capex {_fmt(abs(capex))}"
+                             + (f" - intangibles and investment property bought {_fmt(intang)}" if intang else "")
+                             + f" + net borrowing {_fmt(net_borrowing)}" + (f" - interest paid {_fmt(interest)}" if interest else ""), round(f)))
     if not flows:
         raise ValueError("no year with both operating cash flow and capital expenditure")
     base = sum(flows) / len(flows)
     out["steps"].append((f"base FCFE = average of {len(flows)} year(s)", round(base)))
     _swing_note(out, flows, base, "free cash flow to equity")
+    profits = [y.get("net_income") for y in full[-3:] if (y.get("net_income") or 0) > 0]
+    avg_profit = sum(profits) / len(profits) if profits else 0.0
     if base <= 0:
         out["steps"].append(("free cash flow to equity is negative on average (investment is larger than "
                              "operating cash): the regulated-return view is used instead", round(base)))
+        return _regulated(out, full, a, cc, roe, payout, g)
+    if avg_profit > 0 and base < THIN_FCFE * avg_profit:
+        out["steps"].append((f"free cash flow to equity ({_fmt(base)}) is under {THIN_FCFE:.0%} of average profit "
+                             f"({_fmt(avg_profit)}): the company is reinvesting almost everything, so valuing only "
+                             "that thin cash would understate it; the regulated-return view is used instead", round(base)))
         return _regulated(out, full, a, cc, roe, payout, g)
     lo, hi = float(a.forecast["growth_min"]), float(a.forecast["growth_max"])
     g1 = min(max(roe * (1 - payout), lo), hi)
@@ -341,15 +380,18 @@ def _regulated(out, full, a, cc, roe, payout, g):
     ke = cc["cost_of_equity"]
     out["steps"] += [(f"book equity (owners) {full[-1].end[:4]}", round(book)),
                      (f"return on equity {_pct(roe)} vs cost of equity {_pct(ke)}; book growth = ROE x retention", round(g_book, 6))]
-    r = models.residual_income(book, roe, ke, g_book, years, g)
-    out["steps"] += [(k, round(v)) for k, v in r.steps]
-    out["value"] = _range(lambda k, gg: models.residual_income(book, roe, k, g_book, years, gg).value, ke, g, a)
+    w = float(a.forecast.get("excess_return_persistence", 0.62))
+    r = models.residual_income(book, roe, ke, g_book, years, g, persistence=w)
+    out["steps"] += [(k if k != "terminal value" else f"terminal value (the excess return fades by {w:.2f} a year)", round(v))
+                     for k, v in r.steps]
+    out["value"] = _range(lambda k, gg: models.residual_income(book, roe, k, g_book, years, gg, persistence=w).value, ke, g, a)
 
 
 def _regulated_check(out, full, a, cc, roe, payout, g):
     book, g_book, years = _regulated_inputs(full, a, roe, payout)
     if book > 0:
-        v = models.residual_income(book, roe, cc["cost_of_equity"], g_book, years, g).value
+        v = models.residual_income(book, roe, cc["cost_of_equity"], g_book, years, g,
+                                   persistence=float(a.forecast.get("excess_return_persistence", 0.62))).value
         out["steps"].append((f"cross-check (regulated return): book {_fmt(book)} + PV of (ROE - ke) x book", round(v)))
 
 
@@ -367,6 +409,12 @@ def _property(out, full, mkt):
 def _market_and_liquidity(out, a: Assumptions, mkt) -> None:
     v = out["value"]
     liq = a.liquidity
+    if mkt and out.get("base_year"):
+        from datetime import date as _d
+        age = (_d.fromisoformat(mkt.as_of) - _d.fromisoformat(out["base_year"])).days / 365.25
+        if age > 1.5:
+            out["notes"].append(f"The newest full year read is {out['base_year'][:4]}, about {age:.0f} years before the share "
+                                f"price date ({mkt.as_of}): the value uses old figures, the market cap today's price.")
     a.used.add("liquidity_discount")
     if mkt:
         if mkt.zero_volume_share >= liq["zero_volume_share_high"]:

@@ -220,11 +220,15 @@ def _meaning(report: dict, val: dict | None) -> dict | None:
     ni = _series(report, "net_income")
     mk = val.get("market") or {}
     points, head, tone = [], None, "flat"
-    if coe and roe:
-        ys = sorted(roe)[-3:]
-        avg = sum(roe[y] for y in ys) / len(ys)
+    usd = val.get("roe_avg_usd")
+    if coe and (roe or usd is not None):
+        ys = sorted(roe)[-3:] if roe else []
+        # the valuation's own return on equity, in dollars like the cost of equity, when it has one
+        avg = Decimal(str(usd)) if usd is not None else sum(roe[y] for y in ys) / len(ys)
+        yrs = val.get("roe_avg_years") if usd is not None else [str(y) for y in ys]
+        when = (f" (FY{yrs[0]})" if len(yrs) == 1 else f" (average of FY{yrs[0]}–FY{yrs[-1]})") if yrs else ""
         gap = (avg - Decimal(str(coe))) * 100
-        head = (f"It earned {_pct(avg)} on equity (average of FY{ys[0]}–FY{ys[-1]}) against a "
+        head = (f"It earned {_pct(avg)} on equity{when} against a "
                 f"{_pct(coe)} cost of equity, "
                 + ("about the same: the owners' money earns roughly what they require, so it is worth about "
                    "its book value." if abs(gap) < Decimal("0.5") else
@@ -234,7 +238,7 @@ def _meaning(report: dict, val: dict | None) -> dict | None:
                    f"{abs(gap):.1f} points below: each dollar kept in the business earns less than the owners "
                    "require, so it is worth less than its book value unless returns rise."))
         tone = "flat" if abs(gap) < Decimal("0.5") else "up" if gap > 0 else "watch"
-        if report.get("currency") == "KHR":
+        if report.get("currency") == "KHR" and usd is None:
             points.append("Return on equity is in riel and the cost of equity in dollars; the riel has moved "
                           "little against the dollar, so the comparison holds roughly.")
     rate = mk.get("khr_per_usd")

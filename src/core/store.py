@@ -147,6 +147,20 @@ NEWEST_JOIN = ("JOIN (SELECT filing_id AS rp_id, MAX(period_end) AS rp FROM fact
 NEWEST_ORDER = "rp.rp, g.published_on"
 
 
+def statement_winners(conn: sqlite3.Connection, issuer: str, *, official_only: bool = False) -> dict:
+    """For each (statement, period_end, period_type) of a company, the one filing whose version is used:
+    the newest report (by the period it covers, then publication date) that prints that statement for
+    that period. Every line of a statement-period comes from that one report, so lines from two
+    versions of the same statement are never mixed (a restated total with an old subtotal, or a debt
+    line coded as a total in one report and as current/non-current parts in the next)."""
+    only = " AND g.origin = 'official'" if official_only else ""
+    rows = conn.execute(f"""SELECT DISTINCT f.statement, f.period_end, f.period_type, f.filing_id, rp.rp, g.published_on
+                            FROM facts f JOIN filings g ON g.id = f.filing_id {NEWEST_JOIN}
+                            WHERE f.issuer_id = ? AND g.included = 1 AND f.check_status != 'failed'{only}
+                            ORDER BY {NEWEST_ORDER}""", (issuer, issuer)).fetchall()
+    return {(r[0], r[1], r[2]): r[3] for r in rows}     # newest last, so it wins
+
+
 def connect(path: Path | str) -> sqlite3.Connection:
     conn = sqlite3.connect(str(path), timeout=30)   # wait for another process (reader + downloader) instead of failing
     conn.row_factory = sqlite3.Row

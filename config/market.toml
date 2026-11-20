@@ -28,10 +28,16 @@ verified = false
 
 [forecast]
 # Two-stage models: a first stage of `years` with growth taken from the company's own
-# revenue history, clamped to [min, max], then the terminal growth rate.
+# revenue history, clamped to [min, max], then the terminal growth rate. A shrinking company is
+# projected to keep shrinking (down to growth_min), not held at zero, which would overvalue it.
 years = 5
-growth_min = 0.0
+growth_min = -0.10
 growth_max = 0.10
+# Residual income (banks, regulated utilities): after the forecast years, the return above or below
+# the cost of equity fades by this factor each year instead of lasting forever. 0.62 is the average
+# persistence of abnormal earnings measured by Dechow, Hutton and Sloan (1999), "An empirical
+# assessment of the residual income valuation model", Journal of Accounting and Economics 26.
+excess_return_persistence = 0.62
 source = "judgement starting point"
 as_of = "2026-11-19"
 verified = false

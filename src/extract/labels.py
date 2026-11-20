@@ -124,14 +124,29 @@ def line_items(statement: Statement, rows: list[Row]) -> list[str]:
             name = "income_tax"
         if name is None and statement is Statement.INCOME and re.match(
                 r"(net )?(profit|loss|profit loss|loss profit|profit \(loss\)) for the (financial )?(year|period)\b", norm) \
-                and "attributable" not in norm:
+                and "attributable" not in norm and "continuing" not in norm:
             # "Profit for the year, representing total comprehensive income", "... carried forward to next page"
             name = "net_income"
         if name is None:
             name = slug(row.label)
-        if statement is Statement.BALANCE_SHEET and counts[norm] > 1 and not norm.startswith("total"):
+        if statement is Statement.BALANCE_SHEET and counts[norm] > 1 and not norm.startswith("total") \
+                and not name.startswith("total_"):     # a section total ("Current assets") never takes a section suffix
             name += _section_suffix(row.section)
         names.append(name)
+    if statement is Statement.INCOME and "net_income" not in names:
+        # No plain "profit for the year" line. Use, in this order: a stated total of profit
+        # ("Total profit attributable to"), or the only profit line, printed as attributable to
+        # shareholders. Never a continuing-operations-only line when a business was sold.
+        total = next((i for i, n in enumerate(norms) if re.match(r"total (net )?profit( or loss)? attributable to", n)), None)
+        if total is not None:
+            names[total] = "net_income"
+        for i, norm in enumerate(norms):
+            if "net_income" in names:
+                break
+            if re.match(r"(net )?(profit|loss|profit \(loss\)) for the (financial )?(years?|periods?) attributable to "
+                        r"(the )?(shareholders|owners|equity holders|members)", norm):
+                names[i] = "net_income"
+                break
     seen: Counter[str] = Counter()
     unique = []
     for name in names:
